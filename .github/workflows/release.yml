@@ -13,23 +13,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Install GitVersion
-      uses: gittools/actions/gitversion/setup@v0.10.2
-      with:
-        versionSpec: '5.x'
-    
-    - name: Determine Version
-      uses: gittools/actions/gitversion/execute@v0.10.2
-      id: gitversion
     
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
     
     - name: Build Release x64
-      run: msbuild src/ARCC.sln /p:Configuration=Release /p:Platform=x64 /p:Version=${{ steps.gitversion.outputs.assemblySemVer }} /p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }}
+      run: msbuild src/ARCC.sln /p:Configuration=Release /p:Platform=x64 /p:Version=${{ startsWith(github.ref_name, 'v') && substring(github.ref_name, 1) || github.ref_name }} /p:FileVersion=${{ startsWith(github.ref_name, 'v') && substring(github.ref_name, 1) || github.ref_name }}
     
     - name: Upload Release Artifacts
       uses: actions/upload-artifact@v4
@@ -53,6 +42,6 @@ jobs:
         files: |
           src/x64/Release/ARCC.exe
         draft: false
-        prerelease: ${{ steps.gitversion.outputs.preReleaseLabel != '' }}
+        prerelease: ${{ contains(github.ref_name, '-') }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
