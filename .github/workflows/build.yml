@@ -1,0 +1,32 @@
+name: Build Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+    
+    - name: Build Debug x64
+      run: msbuild src/ARCC.sln /p:Configuration=Debug /p:Platform=x64
+    
+    - name: Build Release x64
+      run: msbuild src/ARCC.sln /p:Configuration=Release /p:Platform=x64
+    
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-check
+        path: |
+          src/x64/Debug/ARCC.exe
+          src/x64/Release/ARCC.exe
