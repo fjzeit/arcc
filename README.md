@@ -51,3 +51,5 @@ You can find me on [X](https://x.com/fjzeit).
 * When timer is running and user selected "change target" but then hits ESC the target is cancelled but the timer still runs. The timer should stop.
 
 * Should allow user to navigate to their target application via the taskbar.
+
+* Source needs a clean up, i.e. would benefit from a little design effort, some separation of concerns and not one big class. But low priority as the tool isn't going to be changed much.

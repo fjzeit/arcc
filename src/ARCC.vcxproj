@@ -118,6 +118,9 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>PRODUCT_VERSION_STRING="9999.99.99.99";FILE_VERSION_STRING="9999.99.99.99";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
