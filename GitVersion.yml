@@ -1,0 +1,25 @@
+mode: ContinuousDelivery
+branches:
+  main:
+    mode: ContinuousDeployment
+    tag: alpha
+    increment: Patch
+  develop:
+    mode: ContinuousDeployment
+    tag: alpha
+    increment: Minor
+  feature:
+    mode: ContinuousDeployment
+    tag: feature
+    increment: Minor
+  hotfix:
+    mode: ContinuousDeployment
+    tag: hotfix
+    increment: Patch
+  release:
+    mode: ContinuousDeployment
+    tag: rc
+    increment: None
+ignore:
+  sha: []
+merge-message-formats: {}

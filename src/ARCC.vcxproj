@@ -135,7 +135,25 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>PRODUCT_VERSION_STRING=\"$(Version)\";FILE_VERSION_STRING=\"$(FileVersion)\";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
+  <Target Name="GenerateVersionHeader" BeforeTargets="ResourceCompile">
+    <PropertyGroup>
+      <DefaultFileVersion Condition="'$(FileVersion)' == ''">1.0.0.0</DefaultFileVersion>
+      <DefaultFileVersion Condition="'$(FileVersion)' != ''">$(FileVersion)</DefaultFileVersion>
+      <DefaultVersion Condition="'$(Version)' == ''">1.0.0.0</DefaultVersion>
+      <DefaultVersion Condition="'$(Version)' != ''">$(Version)</DefaultVersion>
+      <FileVersionCommas>$([System.String]::Copy('$(DefaultFileVersion)').Replace('.', ','))</FileVersionCommas>
+      <VersionCommas>$([System.String]::Copy('$(DefaultVersion)').Replace('.', ','))</VersionCommas>
+    </PropertyGroup>
+    <ItemGroup>
+      <VersionLines Include="#define FILE_VERSION_NUMERIC $(FileVersionCommas)" />
+      <VersionLines Include="#define PRODUCT_VERSION_NUMERIC $(VersionCommas)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(ProjectDir)version.h" Lines="@(VersionLines)" Overwrite="true" />
+  </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

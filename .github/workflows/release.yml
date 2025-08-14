@@ -1,0 +1,68 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Install GitVersion
+      uses: gittools/actions/gitversion/setup@v0.10.2
+      with:
+        versionSpec: '5.x'
+    
+    - name: Determine Version
+      uses: gittools/actions/gitversion/execute@v0.10.2
+      id: gitversion
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+    
+    - name: Build Release x64
+      run: msbuild src/ARCC.sln /p:Configuration=Release /p:Platform=x64 /p:Version=${{ steps.gitversion.outputs.assemblySemVer }} /p:FileVersion=${{ steps.gitversion.outputs.assemblySemFileVer }}
+    
+    - name: Create Release Directory
+      run: mkdir release
+    
+    - name: Copy Release Artifacts
+      run: copy src\x64\Release\ARCC.exe release\
+    
+    - name: Create Release Archive
+      run: |
+        7z a ARCC-${{ steps.gitversion.outputs.semVer }}.zip ./release/*
+    
+    - name: Upload Release Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ARCC-${{ steps.gitversion.outputs.semVer }}
+        path: release/
+    
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ steps.gitversion.outputs.semVer }}
+        body: |
+          ## ARCC Release ${{ steps.gitversion.outputs.semVer }}
+          
+          ### Changes
+          - Automated release build
+          
+          Built from commit: ${{ github.sha }}
+        files: |
+          ARCC-${{ steps.gitversion.outputs.semVer }}.zip
+        draft: false
+        prerelease: ${{ steps.gitversion.outputs.preReleaseLabel != '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
