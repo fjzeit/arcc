@@ -18,8 +18,36 @@ Automatically types "RESUME" followed by Enter into a terminal (or other applica
 
 ## Requirements
 
-Windows 11.
+Windows 11 (tested)
+Windows 10 (not tested)
+
+## Building
+
+### Prerequisites
+
+- Windows 10/11
+- Visual Studio 2022 with C++ Desktop Development workload
+- Or MSBuild tools
+
+### Build with Visual Studio 2022
+
+1. Open `src/ARCC.sln` in Visual Studio 2022
+2. Select Release configuration and x64 platform
+3. Build → Build Solution (Ctrl+Shift+B)
+4. The executable will be in `src/x64/Release/ARCC.exe`
+
+### Build with MSBuild
+
+```cmd
+msbuild src/ARCC.sln /p:Configuration=Release /p:Platform=x64
+```
 
 ## Feedback
 
 You can find me on [X](https://x.com/fjzeit).
+
+## Issues and pending improvements
+
+* When timer is running and user selected "change target" but then hits ESC the target is cancelled but the timer still runs. The timer should stop.
+
+* Should allow user to navigate to their target application via the taskbar.
