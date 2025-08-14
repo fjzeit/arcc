@@ -39,12 +39,12 @@ jobs:
     
     - name: Create Release Archive
       run: |
-        7z a ARCC-${{ steps.gitversion.outputs.semVer }}.zip ./release/*
+        7z a ARCC-${{ github.ref_name }}.zip ./release/*
     
     - name: Upload Release Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: ARCC-${{ steps.gitversion.outputs.semVer }}
+        name: ARCC-${{ github.ref_name }}
         path: release/
     
     - name: Create GitHub Release
@@ -61,7 +61,7 @@ jobs:
           
           Built from commit: ${{ github.sha }}
         files: |
-          ARCC-${{ steps.gitversion.outputs.semVer }}.zip
+          ARCC-${{ github.ref_name }}.zip
         draft: false
         prerelease: ${{ steps.gitversion.outputs.preReleaseLabel != '' }}
       env:
