@@ -17,8 +17,13 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
     
+    - name: Strip v prefix from tag
+      id: version
+      run: echo "version=${{ github.ref_name }}" | sed 's/^v//' >> $GITHUB_OUTPUT
+      shell: bash
+    
     - name: Build Release x64
-      run: msbuild src/ARCC.sln /p:Configuration=Release /p:Platform=x64 /p:Version=${{ startsWith(github.ref_name, 'v') && substring(github.ref_name, 1) || github.ref_name }} /p:FileVersion=${{ startsWith(github.ref_name, 'v') && substring(github.ref_name, 1) || github.ref_name }}
+      run: msbuild src/ARCC.sln /p:Configuration=Release /p:Platform=x64 /p:Version=${{ steps.version.outputs.version }} /p:FileVersion=${{ steps.version.outputs.version }}
     
     - name: Upload Release Artifacts
       uses: actions/upload-artifact@v4
