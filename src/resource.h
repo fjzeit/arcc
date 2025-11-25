@@ -5,4 +5,4 @@
 
 // Timer IDs
 #define TIMER_COUNTDOWN         1
-#define TIMER_STATUS_UPDATE     2
+#define TIMER_HOUR_UPDATE       2

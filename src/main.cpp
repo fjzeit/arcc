@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <chrono>
 #include <vector>
+#include <algorithm>
 #include <d2d1.h>
 #include <dwrite.h>
 #include <dwmapi.h>
@@ -71,6 +72,7 @@ private:
 	static constexpr int DPI_REFERENCE = 96;
 	static constexpr int HOUR_COUNT = 5;
 	static constexpr int TITLE_CHAR_LIMIT = 35;
+	static constexpr UINT HOUR_TIMER_MARGIN_MS = 100;
 
 	// String constants
 	static constexpr const wchar_t* FONT_SEGOE_UI = L"Segoe UI";
@@ -209,6 +211,22 @@ private:
 			// Allow system sleep again
 			SetThreadExecutionState(ES_CONTINUOUS);
 		}
+	}
+
+	void StartHourUpdateTimer() {
+		auto now = std::chrono::system_clock::now();
+		auto time_t_now = std::chrono::system_clock::to_time_t(now);
+		struct tm local_tm;
+		localtime_s(&local_tm, &time_t_now);
+
+		local_tm.tm_min = 0;
+		local_tm.tm_sec = 0;
+		local_tm.tm_hour += 1;
+		auto nextHour = std::chrono::system_clock::from_time_t(mktime(&local_tm));
+
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(nextHour - now);
+		UINT msUntilNextHour = static_cast<UINT>((std::max)(duration.count(), 0LL)) + HOUR_TIMER_MARGIN_MS;
+		SetTimer(m_hMainWindow, TIMER_HOUR_UPDATE, msUntilNextHour, nullptr);
 	}
 
 	// Title bar layout
@@ -1066,17 +1084,19 @@ private:
 				m_targetWindowTitle.clear();
 				m_targetProcessName.clear();
 				StopWindowCapture();
+				StopTimer();
 				UpdateUI();
 			}
 			return 0;
 		case WM_KILLFOCUS:
-			// Might change this later. But we cancel capture when we lose focus. Would be nice if we 
+			// Might change this later. But we cancel capture when we lose focus. Would be nice if we
 			// allowed user to click on explorer/taskbar to navigate to a window. But good enough for now.
 			if (m_bCapturing) {
 				m_hTargetWindow = nullptr;
 				m_targetWindowTitle.clear();
 				m_targetProcessName.clear();
 				StopWindowCapture();
+				StopTimer();
 				UpdateUI();
 			}
 			break;
@@ -1310,6 +1330,7 @@ private:
 		case WM_DESTROY:
 			// Ensure sleep prevention is disabled on exit
 			StopTimer();
+			KillTimer(m_hMainWindow, TIMER_HOUR_UPDATE);
 			PostQuitMessage(0);
 			return 0;
 		}
@@ -1317,6 +1338,7 @@ private:
 	}
 
 	void OnInitialize() {
+		StartHourUpdateTimer();
 		UpdateUI();
 	}
 
@@ -1633,6 +1655,10 @@ private:
 			CheckCountdown();
 			UpdateUI();  // Update countdown display every second
 		}
+		else if (timerID == TIMER_HOUR_UPDATE) {
+			UpdateUI();
+			StartHourUpdateTimer();
+		}
 	}
 
 	void StartWindowCapture() {
@@ -1780,12 +1806,9 @@ private:
 
 	void CheckCountdown() {
 		auto now = std::chrono::system_clock::now();
-		// see if it's time to send resume
 		if (now >= m_targetTime) {
-			SendResumeMessage();
 			StopTimer();
-			m_selectedHourOffset = 0;
-			m_selectedTargetHour = -1;
+			SendResumeMessage();
 			UpdateUI();
 		}
 	}
