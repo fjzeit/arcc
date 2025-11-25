@@ -31,11 +31,28 @@ ARCC is a modern Windows C++ application that automatically sends "RESUME" text 
 
 #### Timer System
 - High-precision timing using `std::chrono::system_clock`
-- Two-timer approach: countdown check (1s) and UI updates (1s) using `SetTimer`
+- Single timer using `SetTimer` (1s interval) for countdown check and UI updates
 - Hour-offset based scheduling (next 5 hours displayed as buttons)
 - Automatic day rollover for past times
 - Real-time countdown display integrated into button text
 - System sleep prevention during active timer (`SetThreadExecutionState`)
+
+**Hour Button Model:**
+- Buttons display the **next 5 hours** starting from the next hour boundary
+- Button index (0-4) represents offset from next hour
+- Example at 2:30pm: buttons show 3pm, 4pm, 5pm, 6pm, 7pm
+  - Button 0 (offset 0) = 3pm (hour 15)
+  - Button 1 (offset 1) = 4pm (hour 16)
+  - etc.
+- `GetHourButtonTimes()` uses `mktime()` for normalization (handles day rollover)
+- The normalized `local_tm.tm_hour` after `mktime()` represents the first button's hour
+
+**Selection Persistence:**
+- When timer is active, button selection needs to persist as time advances
+- `m_selectedHourOffset`: Button index (0-4) currently selected/highlighted
+- `m_selectedTargetHour`: Absolute hour (0-23) that was selected
+- As time advances, the offset is recalculated to keep highlighting the same absolute hour
+- If target hour falls outside the 5-button window, selection is reset
 
 #### Message Automation
 - Keyboard simulation using `keybd_event`

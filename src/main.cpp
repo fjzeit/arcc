@@ -30,6 +30,7 @@ private:
 	std::string m_targetWindowTitle;
 	std::string m_targetProcessName;
 	int m_selectedHourOffset = 0;
+	int m_selectedTargetHour = -1; // The actual hour (0-23) that was selected
 
 	// Theme colors
 	static const D2D1_COLOR_F BG_COLOR;
@@ -203,7 +204,6 @@ private:
 	void StopTimer() {
 		if (m_bTimerActive) {
 			KillTimer(m_hMainWindow, TIMER_COUNTDOWN);
-			KillTimer(m_hMainWindow, TIMER_STATUS_UPDATE);
 			m_bTimerActive = false;
 
 			// Allow system sleep again
@@ -827,6 +827,31 @@ private:
 
 		auto nextHour = std::chrono::system_clock::from_time_t(mktime(&local_tm));
 
+		// If we have a selected target hour and timer is active, 
+		// update the selected offset to maintain the correct selection
+		if (m_bTimerActive && m_selectedTargetHour >= 0) {
+			int startingHour = local_tm.tm_hour;
+			int newOffset = -1;
+			
+			// Find which button index now corresponds to our target hour
+			for (int i = 0; i < HOUR_COUNT; i++) {
+				int buttonHour = (startingHour + i) % 24;
+				if (buttonHour == m_selectedTargetHour) {
+					newOffset = i;
+					break;
+				}
+			}
+			
+			// If the target hour is still within the button range, update the offset
+			if (newOffset >= 0) {
+				m_selectedHourOffset = newOffset;
+			} else {
+				// Target hour has fallen out of range, reset selection
+				m_selectedHourOffset = 0;
+				m_selectedTargetHour = -1;
+			}
+		}
+
 		// Generate hour times starting from next hour
 		for (int i = 0; i < HOUR_COUNT; i++) {
 			auto futureTime = nextHour + std::chrono::hours(i);
@@ -855,7 +880,7 @@ private:
 
 public:
 	ARCCApp() : m_hTargetWindow(nullptr), m_hInputHook(nullptr), m_bCapturing(false), m_bTimerActive(false),
-		m_selectedHourOffset(0), m_hMainWindow(nullptr), m_bDragging(false), m_bMouseTracking(false),
+		m_selectedHourOffset(0), m_selectedTargetHour(-1), m_hMainWindow(nullptr), m_bDragging(false), m_bMouseTracking(false),
 		m_hBackgroundBrush(nullptr), m_bWindowActive(true), m_currentDpiX(96.0f), m_currentDpiY(96.0f),
 		m_titleBarHover(TitleBarHover::None), m_pD2DFactory(nullptr), m_pRenderTarget(nullptr),
 		m_pBgBrush(nullptr), m_pTextBrush(nullptr), m_pButtonBrush(nullptr), m_pButtonHoverBrush(nullptr),
@@ -1581,6 +1606,16 @@ private:
 			if (dipX >= m_layoutData.hourButtonRects[i].left && dipX <= m_layoutData.hourButtonRects[i].right &&
 				dipY >= m_layoutData.hourButtonRects[i].top && dipY <= m_layoutData.hourButtonRects[i].bottom) {
 				m_selectedHourOffset = i;
+				
+				// Calculate and store the actual target hour (0-23) for this selection
+				auto now = std::chrono::system_clock::now();
+				auto time_t = std::chrono::system_clock::to_time_t(now);
+				struct tm local_tm;
+				localtime_s(&local_tm, &time_t);
+				
+				// Target hour is next hour + selected offset
+				m_selectedTargetHour = (local_tm.tm_hour + 1 + i) % 24;
+				
 				InvalidateRect(hWnd, nullptr, FALSE);
 				return;
 			}
@@ -1594,13 +1629,9 @@ private:
 	}
 
 	void OnTimer(HWND hWnd, WPARAM timerID) {
-		switch (timerID) {
-		case TIMER_COUNTDOWN:
+		if (timerID == TIMER_COUNTDOWN) {
 			CheckCountdown();
-			break;
-		case TIMER_STATUS_UPDATE:
-			UpdateUI();
-			break;
+			UpdateUI();  // Update countdown display every second
 		}
 	}
 
@@ -1736,9 +1767,8 @@ private:
 
 			m_targetTime = target;
 
-			// Start timers
+			// Start timer
 			SetTimer(m_hMainWindow, TIMER_COUNTDOWN, 1000, nullptr);
-			SetTimer(m_hMainWindow, TIMER_STATUS_UPDATE, 1000, nullptr);
 			m_bTimerActive = true;
 
 			// Prevent system sleep while timer is active
@@ -1755,6 +1785,7 @@ private:
 			SendResumeMessage();
 			StopTimer();
 			m_selectedHourOffset = 0;
+			m_selectedTargetHour = -1;
 			UpdateUI();
 		}
 	}
