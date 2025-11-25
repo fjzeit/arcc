@@ -26,6 +26,7 @@ private:
 	HWND m_hTargetWindow;
 	HHOOK m_hInputHook;
 	bool m_bCapturing;
+	bool m_bNavigatingViaTaskbar;
 	bool m_bTimerActive;
 	std::chrono::system_clock::time_point m_targetTime;
 	std::string m_targetWindowTitle;
@@ -210,6 +211,9 @@ private:
 
 			// Allow system sleep again
 			SetThreadExecutionState(ES_CONTINUOUS);
+
+			// Reset window title
+			SetWindowTextA(m_hMainWindow, APP_WINDOW_TITLE);
 		}
 	}
 
@@ -897,7 +901,7 @@ private:
 	}
 
 public:
-	ARCCApp() : m_hTargetWindow(nullptr), m_hInputHook(nullptr), m_bCapturing(false), m_bTimerActive(false),
+	ARCCApp() : m_hTargetWindow(nullptr), m_hInputHook(nullptr), m_bCapturing(false), m_bNavigatingViaTaskbar(false), m_bTimerActive(false),
 		m_selectedHourOffset(0), m_selectedTargetHour(-1), m_hMainWindow(nullptr), m_bDragging(false), m_bMouseTracking(false),
 		m_hBackgroundBrush(nullptr), m_bWindowActive(true), m_currentDpiX(96.0f), m_currentDpiY(96.0f),
 		m_titleBarHover(TitleBarHover::None), m_pD2DFactory(nullptr), m_pRenderTarget(nullptr),
@@ -1085,21 +1089,10 @@ private:
 				m_targetProcessName.clear();
 				StopWindowCapture();
 				StopTimer();
+				SetWindowPos(m_hMainWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 				UpdateUI();
 			}
 			return 0;
-		case WM_KILLFOCUS:
-			// Might change this later. But we cancel capture when we lose focus. Would be nice if we
-			// allowed user to click on explorer/taskbar to navigate to a window. But good enough for now.
-			if (m_bCapturing) {
-				m_hTargetWindow = nullptr;
-				m_targetWindowTitle.clear();
-				m_targetProcessName.clear();
-				StopWindowCapture();
-				StopTimer();
-				UpdateUI();
-			}
-			break;
 		case WM_LBUTTONDOWN:
 			OnMouseLeftClick(hWnd, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			return 0;
@@ -1554,6 +1547,9 @@ private:
 	}
 
 	void OnMouseLeftClick(HWND hWnd, int x, int y) {
+		// Remove topmost when user clicks on ARCC (except when starting capture)
+		SetWindowPos(m_hMainWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
 		float dipY_check = PixelToDIP_Y(y);
 
 		// Deal with a title bar click
@@ -1662,12 +1658,19 @@ private:
 	}
 
 	void StartWindowCapture() {
+		if (m_bCapturing) {
+			return;
+		}
+
 		// Clear any existing target to start fresh
 		m_hTargetWindow = nullptr;
 		m_targetWindowTitle.clear();
 		m_targetProcessName.clear();
 
 		m_bCapturing = true;
+
+		// Set window to always-on-top during capture
+		SetWindowPos(m_hMainWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
 		UpdateUI();
 
@@ -1695,6 +1698,10 @@ private:
 			HWND hWnd = WindowFromPoint(pt);
 
 			if (hWnd) {
+				if (hWnd == m_hMainWindow) {
+					return CallNextHookEx(m_hInputHook, nCode, wParam, lParam);
+				}
+
 				// Get process name
 				DWORD processId;
 				GetWindowThreadProcessId(hWnd, &processId);
@@ -1718,8 +1725,9 @@ private:
 					CloseHandle(hSnapshot);
 				}
 
-				// Skip explorer and our own app - this isn't working atm as we cancel tracking on losing focus
-				if (m_targetProcessName == PROCESS_EXPLORER || m_targetProcessName == PROCESS_ARCC) {
+				// Handle explorer specially - allow navigation via taskbar
+				if (m_targetProcessName == PROCESS_EXPLORER) {
+					m_bNavigatingViaTaskbar = true;
 					return CallNextHookEx(m_hInputHook, nCode, wParam, lParam);
 				}
 
@@ -1753,9 +1761,12 @@ private:
 			m_hInputHook = nullptr;
 		}
 		m_bCapturing = false;
+		m_bNavigatingViaTaskbar = false;
 	}
 
 	void ToggleTimer() {
+		SetWindowPos(m_hMainWindow, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+
 		if (m_bTimerActive) {
 			StopTimer();
 		}
@@ -1799,6 +1810,14 @@ private:
 
 			// Prevent system sleep while timer is active
 			SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+
+			// Update window title to show target time
+			int hour12 = targetHour % 12;
+			if (hour12 == 0) hour12 = 12;
+			const char* ampm = (targetHour >= 12) ? "pm" : "am";
+			char title[32];
+			sprintf_s(title, "%s (%d%s)", APP_WINDOW_TITLE, hour12, ampm);
+			SetWindowTextA(m_hMainWindow, title);
 		}
 
 		UpdateUI();

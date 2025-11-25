@@ -26,16 +26,34 @@ ARCC is a modern Windows C++ application that automatically sends "RESUME" text 
 #### Target Selection System
 - Low-level mouse hook (`WH_MOUSE_LL`) for window capture
 - Process enumeration using `PROCESSENTRY32` and `CreateToolhelp32Snapshot`
-- Automatic filtering of system processes (explorer, etc.)
+- ARCC window excluded from selection via direct HWND comparison
 - ESC key cancellation support
+- Window set to always-on-top during capture mode (prevents losing ARCC window)
+- Window remains topmost after capture so user can see selection result over maximized windows
+- Topmost removed when user clicks on ARCC or presses ESC to cancel
+
+**Taskbar Navigation Support:**
+- Clicking explorer.exe (taskbar) during capture sets `m_bNavigatingViaTaskbar` flag
+- This allows users to navigate via taskbar or ALT+TAB without canceling capture
+- Flag is cleared when capture completes or is canceled
+- Only ESC explicitly cancels capture mode
 
 #### Timer System
 - High-precision timing using `std::chrono::system_clock`
-- Single timer using `SetTimer` (1s interval) for countdown check and UI updates
+- Two separate timers with distinct purposes:
+  - `TIMER_COUNTDOWN`: 1s interval, active only when user starts timer, handles countdown check and UI updates
+  - `TIMER_HOUR_UPDATE`: One-shot timer that fires at hour boundaries to refresh hour button labels
 - Hour-offset based scheduling (next 5 hours displayed as buttons)
 - Automatic day rollover for past times
 - Real-time countdown display integrated into button text
 - System sleep prevention during active timer (`SetThreadExecutionState`)
+- Window title updates to show target time when timer active: "ARCC (7pm)"
+
+**Hour Boundary Timer:**
+- Calculates exact milliseconds until next hour plus `HOUR_TIMER_MARGIN_MS` (100ms) margin
+- Margin ensures timer fires after the hour boundary, not before (avoids incorrect button labels)
+- Timer is one-shot: fires once, updates UI, then reschedules itself for next hour
+- Runs independently of countdown timer - keeps hour buttons current even when idle
 
 **Hour Button Model:**
 - Buttons display the **next 5 hours** starting from the next hour boundary

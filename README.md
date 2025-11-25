@@ -13,6 +13,12 @@ Automatically types "RESUME" followed by Enter into a terminal (or other applica
 ## Usage
 
 1. Open the application. Follow the instructions on the screen.
+2. Click the target button to start selection, then click on the application window you want to send "RESUME" to.
+   - ARCC stays on top during selection so you don't lose it.
+   - You can navigate via taskbar or ALT+TAB to find your target window.
+   - Press ESC to cancel selection.
+3. Select a time from the hour buttons.
+4. Click Start. The window title will show the target time (e.g., "ARCC (7pm)").
 
 ![Idle](readme-images/state-1.png)
 
@@ -26,7 +32,7 @@ Windows 10 (not tested)
 ### Prerequisites
 
 - Windows 10/11
-- Visual Studio 2022 with C++ Desktop Development workload
+- Visual Studio 2022 or higher with C++ Desktop Development workload (v143)
 - Or MSBuild tools
 
 ### Build with Visual Studio 2022
@@ -48,6 +54,6 @@ You can find me on [X](https://x.com/fjzeit).
 
 ## Issues and pending improvements
 
-* Should allow user to navigate to their target application via the taskbar.
+* No known issues.
 
 * Source needs a clean up, i.e. would benefit from a little design effort, some separation of concerns and not one big class. But low priority as the tool isn't going to be changed much.
